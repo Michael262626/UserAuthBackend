@@ -53,22 +53,11 @@ export class AuthController {
   }
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    try {
-      return await this.authService.sendResetLink(dto);
-    } catch (error) {
-      // Log the error to the server log for debugging
-      console.error('Error in forgotPassword:', error);
-      throw new HttpException(error.message || 'Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    return await this.authService.sendResetLink(dto);
   }
 
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    try {
-      return await this.authService.resetPassword(dto);
-    } catch (error) {
-      console.error('Error in resetPassword:', error);
-      throw new HttpException(error.message || 'Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    return await this.authService.resetPassword(dto);
   }
 }
