@@ -16,6 +16,12 @@ export class User {
   @Column()
   email: string;
 
+  @Column({ nullable: true })
+  resetToken: string
+
+  @Column({ nullable: true })
+  resetTokenExpiry: Date
+
   @Column({ default: 'user' })
   role: string;
 }

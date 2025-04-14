@@ -1,14 +1,23 @@
 // src/auth/auth.service.ts
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { UsersService } from '../users/users.service';
+import { MoreThan, Repository } from 'typeorm';
+import { MailerService } from '@nestjs-modules/mailer';
+import { User } from 'src/users/user.entity';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class AuthService {
   constructor(
     private usersService: UsersService,
+    @InjectRepository(User) private readonly userRepo: Repository<User>, // Inject the User repository
     private jwtService: JwtService,
+    private mailerService: MailerService,
   ) {}
 
   async register(username: string, email: string, password: string): Promise<any> {
@@ -16,6 +25,47 @@ export class AuthService {
     const user = await this.usersService.createUser(username, email, hashed);
     return this.generateTokens(user);
   }
+  async sendResetLink({ email }: ForgotPasswordDto) {
+    const user = await this.userRepo.findOne({ where: { email } })
+
+    if (!user) throw new NotFoundException('User not found')
+
+    const token = crypto.randomBytes(32).toString('hex')
+    user.resetToken = token
+    user.resetTokenExpiry = new Date(Date.now() + 3600000) // 1 hour expiry
+    await this.userRepo.save(user)
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+
+    await this.mailerService.sendMail({
+      to: user.email,
+      subject: 'Password Reset',
+      template: './reset-password', // optional: use Handlebars or other view engines
+      context: { name: user.username, resetUrl },
+    })
+
+    return { message: 'Reset link sent' }
+  }
+
+  async resetPassword({ token, newPassword }: ResetPasswordDto) {
+    const user = await this.userRepo.findOne({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: MoreThan(new Date()),
+      },
+    })
+
+    if (!user) throw new BadRequestException('Invalid or expired token')
+
+    user.password = await bcrypt.hash(newPassword, 10)
+    user.resetToken = ""
+    user.resetTokenExpiry = new Date();
+
+    await this.userRepo.save(user)
+
+    return { message: 'Password successfully reset' }
+  }
+
 
   async login(email: string, password: string) {
     const user = await this.usersService.findByUsername(email);

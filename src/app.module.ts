@@ -6,10 +6,27 @@ import { User } from './users/user.entity';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { JwtService } from '@nestjs/jwt';
+import { Repository } from 'typeorm/repository/Repository';
+import { MailerModule } from '@nestjs-modules/mailer';  // Import MailerModule
+import { MAILER_OPTIONS } from '@nestjs-modules/mailer';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    MailerModule.forRoot({
+      transport: {
+        host: process.env.MAIL_HOST,
+        port: 587,
+        secure: false,  // true for 465, false for other ports
+        auth: {
+          user: process.env.MAIL_USER,
+          pass: process.env.MAIL_PASS,
+        },
+      },
+      defaults: {
+        from: '"No Reply" <no-reply@example.com>',
+      },
+    }),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DB_HOST,
