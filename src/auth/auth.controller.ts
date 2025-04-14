@@ -1,5 +1,5 @@
 // src/auth/auth.controller.ts
-import { Controller, Post, Body, Res, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Body, Res, UseGuards, Get, HttpException, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Response } from 'express';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -53,11 +53,22 @@ export class AuthController {
   }
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.sendResetLink(dto)
+    try {
+      return await this.authService.sendResetLink(dto);
+    } catch (error) {
+      // Log the error to the server log for debugging
+      console.error('Error in forgotPassword:', error);
+      throw new HttpException(error.message || 'Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    return this.authService.resetPassword(dto)
+    try {
+      return await this.authService.resetPassword(dto);
+    } catch (error) {
+      console.error('Error in resetPassword:', error);
+      throw new HttpException(error.message || 'Internal Server Error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 }

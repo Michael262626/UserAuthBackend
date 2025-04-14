@@ -40,14 +40,15 @@ export class AuthService {
     await this.mailerService.sendMail({
       to: user.email,
       subject: 'Password Reset',
-      template: './reset-password', // optional: use Handlebars or other view engines
+      template: './reset-password', 
+      text: `Hello ${user.username},\n\nClick the link below to reset your password:\n${resetUrl}`,
       context: { name: user.username, resetUrl },
     })
 
     return { message: 'Reset link sent' }
   }
 
-  async resetPassword({ token, newPassword }: ResetPasswordDto) {
+  async resetPassword({ token, password }: ResetPasswordDto) {
     const user = await this.userRepo.findOne({
       where: {
         resetToken: token,
@@ -57,7 +58,7 @@ export class AuthService {
 
     if (!user) throw new BadRequestException('Invalid or expired token')
 
-    user.password = await bcrypt.hash(newPassword, 10)
+    user.password = await bcrypt.hash(password, 10)
     user.resetToken = ""
     user.resetTokenExpiry = new Date();
 
